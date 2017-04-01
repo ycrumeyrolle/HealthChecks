@@ -6,6 +6,7 @@ using System.Collections.Generic;
 
 namespace Microsoft.Extensions.HealthChecks
 {
+
     public static partial class HealthCheckBuilderExtensions
     {
         // Numeric checks
@@ -17,7 +18,7 @@ namespace Microsoft.Extensions.HealthChecks
             Guard.ArgumentNotNullOrWhitespace(nameof(name), name);
             Guard.ArgumentNotNull(nameof(currentValueFunc), currentValueFunc);
 
-            builder.AddCheck(name, () =>
+            builder.AddCheck(name, context =>
             {
                 var currentValue = currentValueFunc();
                 var status = currentValue.CompareTo(minValue) >= 0 ? CheckStatus.Healthy : CheckStatus.Unhealthy;
@@ -38,7 +39,7 @@ namespace Microsoft.Extensions.HealthChecks
             Guard.ArgumentNotNullOrWhitespace(nameof(name), name);
             Guard.ArgumentNotNull(nameof(currentValueFunc), currentValueFunc);
 
-            builder.AddCheck($"{name}", () =>
+            builder.AddCheck($"{name}", context =>
             {
                 var currentValue = currentValueFunc();
                 var status = currentValue.CompareTo(maxValue) <= 0 ? CheckStatus.Healthy : CheckStatus.Unhealthy;

@@ -13,14 +13,24 @@ namespace Microsoft.Extensions.HealthChecks
 {
     public class HealthCheckService : IHealthCheckService
     {
-        public IReadOnlyDictionary<string, IHealthCheck> _checks;
+        private readonly ILogger<HealthCheckService> _logger;
+        private readonly IHealthCheckFactory _healthCheckFactory;
+        private readonly HealthCheckDescriptor[] _checkDescriptors;
+        private readonly IHealthCheck[] _checks;
 
-        private ILogger<HealthCheckService> _logger;
-
-        public HealthCheckService(HealthCheckBuilder builder, ILogger<HealthCheckService> logger)
+        public HealthCheckService(
+            IHealthCheckFactory healthCheckFactory,
+            HealthCheckBuilder builder,
+            ILogger<HealthCheckService> logger)
         {
-            _checks = builder.Checks;
+            Guard.ArgumentNotNull(nameof(healthCheckFactory), healthCheckFactory);
+            Guard.ArgumentNotNull(nameof(builder), builder);
+            Guard.ArgumentNotNull(nameof(logger), logger);
+
+            _healthCheckFactory = healthCheckFactory;
             _logger = logger;
+            _checkDescriptors = builder.Build().ToArray();
+            _checks = _checkDescriptors.Select(_healthCheckFactory.Create).ToArray();
         }
 
         public async Task<CompositeHealthCheckResult> CheckHealthAsync(CheckStatus partiallyHealthyStatus, CancellationToken cancellationToken)
@@ -30,21 +40,29 @@ namespace Microsoft.Extensions.HealthChecks
 
             try
             {
-                var healthCheckTasks = _checks.Select(check => new { Key = check.Key, Task = check.Value.CheckAsync(cancellationToken).AsTask() }).ToList();
-                await Task.WhenAll(healthCheckTasks.Select(x => x.Task)).ConfigureAwait(false);
-
-                foreach (var healthCheckTask in healthCheckTasks)
+                var healthCheckTasks = new Task<IHealthCheckResult>[_checkDescriptors.Length];
+                for (int i = 0; i < _checkDescriptors.Length; i++)
                 {
+                    healthCheckTasks[i] = _checks[i]
+                        .CheckAsync(new HealthCheckContext(_checkDescriptors[i].Requirement, cancellationToken))
+                        .AsTask();
+                }
+
+                var results = await Task.WhenAll(healthCheckTasks).ConfigureAwait(false);
+
+                for (int i = 0; i < _checkDescriptors.Length; i++)
+                {
+                    var healthCheckResult = results[i];
+                    var key = _checkDescriptors[i].Requirement.Name;
                     try
                     {
-                        var healthCheckResult = healthCheckTask.Task.Result;
-                        logMessage.AppendLine($"HealthCheck: {healthCheckTask.Key} : {healthCheckResult.CheckStatus}");
-                        result.Add(healthCheckTask.Key, healthCheckResult);
+                        logMessage.AppendLine($"HealthCheck: {key} : {healthCheckResult.CheckStatus}");
+                        result.Add(key, healthCheckResult);
                     }
                     catch (Exception ex)
                     {
-                        logMessage.AppendLine($"HealthCheck: {healthCheckTask.Key} : Exception {ex.GetType().FullName} thrown");
-                        result.Add(healthCheckTask.Key, CheckStatus.Unhealthy, $"Exception during check: {ex.GetType().FullName}");
+                        logMessage.AppendLine($"HealthCheck: {key} : Exception {ex.GetType().FullName} thrown");
+                        result.Add(key, CheckStatus.Unhealthy, $"Exception during check: {ex.GetType().FullName}");
                     }
                 }
 
@@ -63,6 +81,26 @@ namespace Microsoft.Extensions.HealthChecks
             }
         }
 
+        // This entry point is for non-DI (we leave the single constructor in place for DI)
+        public static HealthCheckService FromBuilder(HealthCheckBuilder builder, ILogger<HealthCheckService> logger)
+            => new HealthCheckService(new SimpleHealthCheckFactory(), builder, logger);
+
         private static string MessageFormatter(string state, Exception error) => state;
+        
+        class SimpleHealthCheckFactory : IHealthCheckFactory
+        {
+            private readonly Dictionary<Type, IHealthCheck> _singletons = new Dictionary<Type, IHealthCheck>();
+
+            public IHealthCheck Create(HealthCheckDescriptor descriptor)
+            {
+                if (!_singletons.TryGetValue(descriptor.Type, out var result))
+                {
+                    result = (IHealthCheck)Activator.CreateInstance(descriptor.Type);
+                    _singletons[descriptor.Type] = result;
+                }
+
+                return result;
+            }
+        }
     }
 }

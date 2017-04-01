@@ -3,6 +3,7 @@
 
 using System;
 using Microsoft.Extensions.HealthChecks;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -10,12 +11,13 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static IServiceCollection AddHealthChecks(this IServiceCollection services, Action<HealthCheckBuilder> checkupAction)
         {
-            var checkupBuilder = new HealthCheckBuilder();
+            var checkupBuilder = new HealthCheckBuilder(services);
 
             checkupAction.Invoke(checkupBuilder);
 
             services.AddSingleton(checkupBuilder);
             services.AddSingleton<IHealthCheckService, HealthCheckService>();
+            services.AddSingleton<HealthCheckFactory>();
             return services;
         }
     }

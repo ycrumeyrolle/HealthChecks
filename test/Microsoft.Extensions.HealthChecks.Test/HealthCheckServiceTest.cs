@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
@@ -16,9 +17,9 @@ namespace Microsoft.Extensions.HealthChecks
 
         public HealthCheckServiceTest()
         {
-            _builder = new HealthCheckBuilder();
+            _builder = new HealthCheckBuilder(new ServiceCollection());
             _logger = Substitute.For<ILogger<HealthCheckService>>();
-            _classUnderTest = new HealthCheckService(_builder, _logger);
+            _classUnderTest = HealthCheckService.FromBuilder(_builder, _logger);
         }
 
         [Fact]

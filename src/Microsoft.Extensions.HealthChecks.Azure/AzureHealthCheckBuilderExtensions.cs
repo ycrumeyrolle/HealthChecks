@@ -17,7 +17,7 @@ namespace Microsoft.Extensions.HealthChecks
         }
         public static HealthCheckBuilder AddAzureBlobStorageCheck(HealthCheckBuilder builder, CloudStorageAccount storageAccount, string containerName = null)
         {
-            builder.AddCheck($"AzureBlobStorageCheck {storageAccount.BlobStorageUri} {containerName}", async () =>
+            builder.AddCheck($"AzureBlobStorageCheck {storageAccount.BlobStorageUri} {containerName}", async ctx =>
             {
                 bool result;
                 try
@@ -56,7 +56,7 @@ namespace Microsoft.Extensions.HealthChecks
         }
         public static HealthCheckBuilder AddAzureTableStorageCheck(HealthCheckBuilder builder, CloudStorageAccount storageAccount, string tableName = null)
         {
-            builder.AddCheck($"AzureTableStorageCheck {storageAccount.TableStorageUri} {tableName}", async () =>
+            builder.AddCheck($"AzureTableStorageCheck {storageAccount.TableStorageUri} {tableName}", async requirement =>
             {
                 bool result;
                 try
@@ -95,7 +95,7 @@ namespace Microsoft.Extensions.HealthChecks
         }
         public static HealthCheckBuilder AddAzureFileStorageCheck(HealthCheckBuilder builder, CloudStorageAccount storageAccount, string shareName = null)
         {
-            builder.AddCheck($"AzureFileStorageCheck {storageAccount.FileStorageUri} {shareName}", async () =>
+            builder.AddCheck($"AzureFileStorageCheck {storageAccount.FileStorageUri} {shareName}", async requirement =>
             {
                 bool result;
                 try
@@ -134,7 +134,7 @@ namespace Microsoft.Extensions.HealthChecks
         }
         public static HealthCheckBuilder AddAzureQueueStorageCheck(HealthCheckBuilder builder, CloudStorageAccount storageAccount, string queueName = null)
         {
-            builder.AddCheck($"AzureQueueStorageCheck {storageAccount.QueueStorageUri} {queueName}", async () =>
+            builder.AddCheck($"AzureQueueStorageCheck {storageAccount.QueueStorageUri} {queueName}", async requirement =>
             {
                 bool result;
                 try

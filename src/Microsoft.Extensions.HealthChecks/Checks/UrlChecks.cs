@@ -41,7 +41,7 @@ namespace Microsoft.Extensions.HealthChecks
             Guard.ArgumentNotNull(nameof(checkFunc), checkFunc);
 
             var urlCheck = new UrlChecker(checkFunc, url);
-            builder.AddCheck($"UrlCheck({url})", () => urlCheck.CheckAsync());
+            builder.AddCheck($"UrlCheck({url})", context => urlCheck.CheckAsync());
             return builder;
         }
 
@@ -102,7 +102,7 @@ namespace Microsoft.Extensions.HealthChecks
             Guard.ArgumentNotNullOrWhitespace(nameof(groupName), groupName);
 
             var urlChecker = new UrlChecker(checkFunc, urls) { PartiallyHealthyStatus = partialSuccessStatus };
-            builder.AddCheck($"UrlChecks({groupName})", () => urlChecker.CheckAsync());
+            builder.AddCheck($"UrlChecks({groupName})", requirement => urlChecker.CheckAsync());
             return builder;
         }
     }

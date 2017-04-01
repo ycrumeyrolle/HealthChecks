@@ -3,29 +3,69 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Extensions.HealthChecks
 {
     public class HealthCheckBuilder
     {
-        private readonly Dictionary<string, IHealthCheck> _checks;
+        private readonly List<HealthCheckDescriptor> _descriptors;
+        private readonly IServiceCollection _serviceCollection;
 
-        public HealthCheckBuilder()
+        public HealthCheckBuilder(IServiceCollection serviceCollection)
         {
-            _checks = new Dictionary<string, IHealthCheck>(StringComparer.OrdinalIgnoreCase);
+            _serviceCollection = serviceCollection;
+            _descriptors = new List<HealthCheckDescriptor>();
             DefaultCacheDuration = TimeSpan.FromMinutes(5);
         }
 
-        public IReadOnlyDictionary<string, IHealthCheck> Checks => _checks;
+        public IServiceCollection Services => _serviceCollection;
+
+        public IEnumerable<HealthCheckDescriptor> Requirements => _descriptors;
 
         public TimeSpan DefaultCacheDuration { get; private set; }
 
-        public HealthCheckBuilder AddCheck(string name, IHealthCheck check)
+        //public HealthCheckBuilder AddCheck(string name, Func<HealthCheckContext, ValueTask<IHealthCheckResult>> check)
+        //{
+        //    Guard.ArgumentNotNull(nameof(check), check);
+
+        //    AddCheck<InlineHealthCheck>(new InlineHealthCheckRequirement(name, check));
+        //    return this;
+        //}
+
+        public HealthCheckBuilder AddCheck(string name, Func<HealthCheckContext, Task<IHealthCheckResult>> check)
         {
-            Guard.ArgumentNotNullOrWhitespace(nameof(name), name);
             Guard.ArgumentNotNull(nameof(check), check);
 
-            _checks.Add(name, check);
+            AddCheck<InlineHealthCheck>(new InlineHealthCheckRequirement(name, check));
+            return this;
+        }
+
+        public HealthCheckBuilder AddCheck(string name, Func<HealthCheckContext, IHealthCheckResult> check)
+        {
+            Guard.ArgumentNotNull(nameof(check), check);
+
+            AddCheck(InlineHealthCheck.FromCheck(check), new InlineHealthCheckRequirement(name, check));
+            return this;
+        }
+
+        public HealthCheckBuilder AddCheck<TCheck>(TCheck check, IHealthCheckRequirement requirement) where TCheck : class, IHealthCheck
+        {
+            Guard.ArgumentNotNull(nameof(check), check);
+            Guard.ArgumentNotNull(nameof(requirement), requirement);
+
+            _serviceCollection.AddSingleton(check);
+            _descriptors.Add(new HealthCheckDescriptor(check.GetType(), requirement));
+            return this;
+        }
+
+        public HealthCheckBuilder AddCheck<TCheck>(IHealthCheckRequirement requirement) where TCheck : class, IHealthCheck
+        {
+            Guard.ArgumentNotNull(nameof(requirement), requirement);
+
+            _serviceCollection.AddSingleton<TCheck>();
+            _descriptors.Add(new HealthCheckDescriptor(typeof(TCheck), requirement));
             return this;
         }
 
@@ -35,6 +75,17 @@ namespace Microsoft.Extensions.HealthChecks
 
             DefaultCacheDuration = duration;
             return this;
+        }
+
+        public IEnumerable<HealthCheckDescriptor> Build()
+        {
+
+            foreach (var descriptor in _descriptors)
+            {
+                descriptor.Requirement.CacheDuration = DefaultCacheDuration;
+            }
+
+            return _descriptors;
         }
     }
 }

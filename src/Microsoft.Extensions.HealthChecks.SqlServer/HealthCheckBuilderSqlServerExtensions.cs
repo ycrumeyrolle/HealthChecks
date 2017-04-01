@@ -11,7 +11,7 @@ namespace Microsoft.Extensions.HealthChecks
     {
         public static HealthCheckBuilder AddSqlCheck(this HealthCheckBuilder builder, string name, string connectionString)
         {
-            builder.AddCheck($"SqlCheck({name})", async () =>
+            builder.AddCheck($"SqlCheck({name})", async requirement =>
             {
                 try
                 {
