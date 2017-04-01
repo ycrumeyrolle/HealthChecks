@@ -1,4 +1,4 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+nn// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -15,6 +15,8 @@ namespace Microsoft.Extensions.HealthChecks
 
         public HealthCheckBuilder(IServiceCollection serviceCollection)
         {
+            Guard.ArgumentNotNull(nameof(serviceCollection), serviceCollection);
+
             _serviceCollection = serviceCollection;
             _descriptors = new List<HealthCheckDescriptor>();
             DefaultCacheDuration = TimeSpan.FromMinutes(5);
@@ -79,7 +81,6 @@ namespace Microsoft.Extensions.HealthChecks
 
         public IEnumerable<HealthCheckDescriptor> Build()
         {
-
             foreach (var descriptor in _descriptors)
             {
                 descriptor.Requirement.CacheDuration = DefaultCacheDuration;

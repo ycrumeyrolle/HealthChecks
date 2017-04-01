@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -11,7 +12,7 @@ namespace Microsoft.Extensions.HealthChecks  // Put this in Extensions so you al
             // REVIEW: Should we add a way to override the service collection, or just assume no DI here?
             var logger = new LoggerFactory().CreateLogger<HealthCheckService>();
 
-            Builder = new HealthCheckBuilder(null);
+            Builder = new HealthCheckBuilder(new SimpleServiceCollection());
             HandlerCheckTimeout = TimeSpan.FromSeconds(10);
             Service = HealthCheckService.FromBuilder(Builder, logger);
         }
@@ -27,6 +28,10 @@ namespace Microsoft.Extensions.HealthChecks  // Put this in Extensions so you al
             Guard.ArgumentValid(timeout > TimeSpan.Zero, nameof(timeout), "Health check timeout must be a positive time span");
 
             HandlerCheckTimeout = timeout;
+        }
+
+        private class SimpleServiceCollection : List<ServiceDescriptor>, IServiceCollection
+        {
         }
     }
 }
